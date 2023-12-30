@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public class Order extends AggregateRoot<OrderId> {
     private final CustomerId customerId;
-    private final Restaurantid restaurantid;
+    private final RestaurantId restaurantid;
     private final StreetAddress deliveryAddress;
     private final Money price;
     private final List<OrderItem> items;
@@ -31,6 +31,46 @@ public class Order extends AggregateRoot<OrderId> {
         validateInitialOrder();
         validateTotalPrice();
         validateItemsPrice();
+    }
+
+    public void pay() {
+        if (orderStatus != OrderStatus.PENDING) {
+            throw new OrderDomainException("Order is not in correct state for pay operation!");
+        }
+        orderStatus = OrderStatus.PAID;
+    }
+
+    public void approve() {
+        if (orderStatus != OrderStatus.PAID) {
+            throw new OrderDomainException("Order is not in correct state for approve operation!");
+        }
+        orderStatus = OrderStatus.APPROVED;
+    }
+
+    public void initCancel(List<String> failureMessages) {
+        if (orderStatus != OrderStatus.PAID) {
+            throw new OrderDomainException("Order is not in correct state for initCancel operation!");
+        }
+        orderStatus = OrderStatus.CANCELLING;
+        updateFailureMessages(failureMessages);
+    }
+
+    public void cancel(List<String> failureMessages) {
+        if (!(orderStatus == OrderStatus.CANCELLING || orderStatus == OrderStatus.PENDING)) {
+            throw new OrderDomainException("Order is not in correct state for cancel operation!");
+        }
+        orderStatus = OrderStatus.CANCELLED;
+        updateFailureMessages(failureMessages);
+    }
+
+    private void updateFailureMessages(List<String> failureMessages) {
+        if (this.failureMessages != null &&  failureMessages != null) {
+            this.failureMessages.addAll(failureMessages.stream().filter(message -> !message.isEmpty()).toList());
+        }
+
+        if (this.failureMessages == null) {
+            this.failureMessages = failureMessages;
+        }
     }
 
     private void validateInitialOrder() {
@@ -88,7 +128,7 @@ public class Order extends AggregateRoot<OrderId> {
         return customerId;
     }
 
-    public Restaurantid getRestaurantid() {
+    public RestaurantId getRestaurantid() {
         return restaurantid;
     }
 
@@ -119,7 +159,7 @@ public class Order extends AggregateRoot<OrderId> {
     public static final class Builder {
         private OrderId orderId;
         private CustomerId customerId;
-        private Restaurantid restaurantid;
+        private RestaurantId restaurantid;
         private StreetAddress deliveryAddress;
         private Money price;
         private List<OrderItem> items;
@@ -144,7 +184,7 @@ public class Order extends AggregateRoot<OrderId> {
             return this;
         }
 
-        public Builder restaurantid(Restaurantid val) {
+        public Builder restaurantid(RestaurantId val) {
             restaurantid = val;
             return this;
         }
